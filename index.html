@@ -1,0 +1,1785 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forma — Build systems that matter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0d0d0e;
+        --bg2: #131315;
+        --surface: #1a1a1d;
+        --border: rgba(255, 255, 255, 0.07);
+        --accent: #00e87a;
+        --accent-dim: rgba(0, 232, 122, 0.12);
+        --accent-glow: rgba(0, 232, 122, 0.25);
+        --text: #f0f0ee;
+        --text-muted: #888884;
+        --text-faint: #3a3a3a;
+        --font-display: "Cabinet Grotesk", sans-serif;
+        --font-serif: "Instrument Serif", serif;
+        --font-mono: "JetBrains Mono", monospace;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-display);
+        font-size: 16px;
+        line-height: 1.6;
+        overflow-x: hidden;
+        cursor: none;
+      }
+
+      /* Custom cursor */
+      #cursor {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 10px;
+        height: 10px;
+        background: var(--accent);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        transition:
+          transform 0.08s ease,
+          width 0.2s ease,
+          height 0.2s ease,
+          opacity 0.2s ease;
+        mix-blend-mode: difference;
+      }
+      #cursor.expand {
+        width: 48px;
+        height: 48px;
+        background: var(--accent);
+        opacity: 0.3;
+      }
+
+      /* NOISE OVERLAY */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0.35;
+      }
+
+      /* NAV */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 1.5rem 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid transparent;
+        transition:
+          border-color 0.3s,
+          background 0.3s,
+          backdrop-filter 0.3s;
+      }
+      nav.scrolled {
+        border-color: var(--border);
+        background: rgba(13, 13, 14, 0.85);
+        backdrop-filter: blur(18px);
+      }
+      .logo {
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        color: var(--text);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .logo-dot {
+        color: var(--accent);
+      }
+      .nav-links {
+        display: flex;
+        gap: 2.5rem;
+        list-style: none;
+      }
+      .nav-links a {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-decoration: none;
+        letter-spacing: 0.01em;
+        transition: color 0.2s;
+      }
+      .nav-links a:hover {
+        color: var(--text);
+      }
+      .nav-cta {
+        background: var(--accent);
+        color: #0d0d0e;
+        font-size: 0.875rem;
+        font-weight: 700;
+        padding: 0.625rem 1.375rem;
+        border-radius: 99px;
+        text-decoration: none;
+        letter-spacing: -0.01em;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+      .nav-cta:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 24px var(--accent-glow);
+      }
+      .nav-cta:active {
+        transform: translateY(0) scale(0.98);
+      }
+
+      /* HERO */
+      .hero {
+        min-height: 100dvh;
+        padding: 10rem 2.5rem 6rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: center;
+        max-width: 1400px;
+        margin: 0 auto;
+        position: relative;
+      }
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--accent-dim);
+        border: 1px solid rgba(0, 232, 122, 0.2);
+        border-radius: 99px;
+        padding: 0.375rem 0.875rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--accent);
+        font-family: var(--font-mono);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 2rem;
+        width: fit-content;
+      }
+      .badge-pulse {
+        width: 6px;
+        height: 6px;
+        background: var(--accent);
+        border-radius: 50%;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.4;
+          transform: scale(0.7);
+        }
+      }
+      .hero-headline {
+        font-size: clamp(3rem, 5.5vw, 5.5rem);
+        font-weight: 900;
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+        color: var(--text);
+        margin-bottom: 1.75rem;
+      }
+      .hero-headline em {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-style: italic;
+        color: var(--accent);
+      }
+      .hero-sub {
+        font-size: 1.125rem;
+        color: var(--text-muted);
+        max-width: 44ch;
+        line-height: 1.7;
+        margin-bottom: 2.5rem;
+      }
+      .hero-actions {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #0d0d0e;
+        font-family: var(--font-display);
+        font-size: 1rem;
+        font-weight: 700;
+        padding: 0.875rem 2rem;
+        border-radius: 99px;
+        border: none;
+        cursor: none;
+        text-decoration: none;
+        letter-spacing: -0.01em;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 40px var(--accent-glow);
+      }
+      .btn-primary:active {
+        transform: scale(0.98);
+      }
+      .btn-ghost {
+        font-size: 0.9375rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        transition: color 0.2s;
+      }
+      .btn-ghost:hover {
+        color: var(--text);
+      }
+      .btn-ghost svg {
+        transition: transform 0.2s;
+      }
+      .btn-ghost:hover svg {
+        transform: translateX(3px);
+      }
+
+      /* Hero right: visual */
+      .hero-visual {
+        position: relative;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .terminal-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 0;
+        width: 100%;
+        max-width: 440px;
+        overflow: hidden;
+        box-shadow:
+          0 40px 80px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(255, 255, 255, 0.04);
+        position: relative;
+      }
+      .terminal-bar {
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid var(--border);
+        padding: 0.875rem 1.125rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .t-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .t-dot.red {
+        background: #ff5f57;
+      }
+      .t-dot.yellow {
+        background: #ffbd2e;
+      }
+      .t-dot.green {
+        background: #27c93f;
+      }
+      .terminal-title {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--text-faint);
+        margin-left: auto;
+        margin-right: auto;
+        padding-right: 1.5rem;
+      }
+      .terminal-body {
+        padding: 1.5rem;
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        line-height: 1.9;
+        color: var(--text-muted);
+      }
+      .t-line {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .t-prompt {
+        color: var(--accent);
+      }
+      .t-cmd {
+        color: #c9d1d9;
+      }
+      .t-comment {
+        color: var(--text-faint);
+      }
+      .t-output {
+        color: #888;
+        padding-left: 1.25rem;
+      }
+      .t-success {
+        color: var(--accent);
+      }
+      .t-cursor {
+        display: inline-block;
+        width: 8px;
+        height: 14px;
+        background: var(--accent);
+        margin-left: 2px;
+        vertical-align: middle;
+        animation: blink 1.1s step-end infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .hero-stat-strip {
+        position: absolute;
+        bottom: -1.5rem;
+        left: 0;
+        right: 0;
+        display: flex;
+        gap: 1px;
+        background: var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+      .hero-stat {
+        background: var(--bg2);
+        flex: 1;
+        padding: 0.875rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+      }
+      .stat-val {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: -0.03em;
+      }
+      .stat-label {
+        font-size: 0.6875rem;
+        font-family: var(--font-mono);
+        color: var(--text-faint);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      /* MARQUEE */
+      .marquee-wrapper {
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        padding: 1.25rem 0;
+        overflow: hidden;
+        position: relative;
+        background: var(--bg2);
+      }
+      .marquee-track {
+        display: flex;
+        width: max-content;
+        animation: marquee 22s linear infinite;
+        gap: 0;
+      }
+      .marquee-track:hover {
+        animation-play-state: paused;
+      }
+      .marquee-item {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        padding: 0 2.5rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-faint);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .marquee-sep {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+      @keyframes marquee {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      /* SECTION COMMONS */
+      section {
+        padding: 7rem 2.5rem;
+      }
+      .section-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .section-tag {
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+      }
+      .section-tag::before {
+        content: "";
+        display: block;
+        width: 24px;
+        height: 1px;
+        background: var(--accent);
+      }
+
+      /* FEATURES */
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-top: 4rem;
+      }
+      .feat {
+        background: var(--bg);
+        padding: 2.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        transition: background 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+      .feat::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at 0% 0%,
+          var(--accent-dim),
+          transparent 60%
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .feat:hover {
+        background: var(--bg2);
+      }
+      .feat:hover::after {
+        opacity: 1;
+      }
+      .feat-wide {
+        grid-column: span 7;
+      }
+      .feat-narrow {
+        grid-column: span 5;
+      }
+      .feat-full {
+        grid-column: span 12;
+      }
+      .feat-third {
+        grid-column: span 4;
+      }
+      .feat-icon {
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+      }
+      .feat-icon svg {
+        color: var(--accent);
+      }
+      .feat-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        position: relative;
+        z-index: 1;
+      }
+      .feat-desc {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        line-height: 1.65;
+        position: relative;
+        z-index: 1;
+      }
+
+      .features-header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: end;
+      }
+      .features-headline {
+        font-size: clamp(2.25rem, 3.5vw, 3.75rem);
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+      .features-headline em {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-weight: 400;
+        color: var(--text-muted);
+      }
+      .features-copy {
+        color: var(--text-muted);
+        font-size: 1rem;
+        line-height: 1.75;
+        max-width: 42ch;
+      }
+
+      /* SOCIAL PROOF */
+      .proof-section {
+        background: var(--bg2);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+      .proof-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: var(--border);
+        margin-top: 3.5rem;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      .testimonial {
+        background: var(--bg2);
+        padding: 2.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        transition: background 0.2s;
+      }
+      .testimonial:hover {
+        background: var(--surface);
+      }
+      .t-stars {
+        display: flex;
+        gap: 3px;
+      }
+      .t-stars span {
+        width: 12px;
+        height: 12px;
+        background: var(--accent);
+        clip-path: polygon(
+          50% 0%,
+          61% 35%,
+          98% 35%,
+          68% 57%,
+          79% 91%,
+          50% 70%,
+          21% 91%,
+          32% 57%,
+          2% 35%,
+          39% 35%
+        );
+      }
+      .t-quote {
+        font-size: 1.0625rem;
+        line-height: 1.65;
+        color: var(--text);
+        font-weight: 400;
+      }
+      .t-author {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        margin-top: auto;
+      }
+      .t-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+      .t-name {
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+      .t-role {
+        font-size: 0.75rem;
+        color: var(--text-faint);
+        font-family: var(--font-mono);
+      }
+
+      /* PRICING */
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        margin-top: 4rem;
+        align-items: start;
+      }
+      .price-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 2.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        position: relative;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .price-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+      .price-card.featured {
+        background: #0f1f16;
+        border-color: rgba(0, 232, 122, 0.3);
+        box-shadow:
+          0 0 0 1px rgba(0, 232, 122, 0.15),
+          0 40px 80px rgba(0, 0, 0, 0.4);
+      }
+      .price-card.featured:hover {
+        box-shadow:
+          0 0 0 1px rgba(0, 232, 122, 0.3),
+          0 0 60px rgba(0, 232, 122, 0.1),
+          0 32px 80px rgba(0, 0, 0, 0.5);
+      }
+      .price-label {
+        font-size: 0.75rem;
+        font-family: var(--font-mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        margin-bottom: 1.25rem;
+      }
+      .price-label.acc {
+        color: var(--accent);
+      }
+      .price-amount {
+        font-size: 3.25rem;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        margin-bottom: 0.375rem;
+      }
+      .price-period {
+        font-size: 0.8125rem;
+        color: var(--text-faint);
+        font-family: var(--font-mono);
+        margin-bottom: 1.75rem;
+      }
+      .price-desc {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .price-features {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+        margin-bottom: 2.25rem;
+      }
+      .price-features li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.625rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+      .check {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent-dim);
+        border: 1px solid rgba(0, 232, 122, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .check svg {
+        color: var(--accent);
+      }
+      .btn-plan {
+        display: block;
+        text-align: center;
+        padding: 0.875rem;
+        border-radius: 10px;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        margin-top: auto;
+        cursor: none;
+      }
+      .btn-plan.outline {
+        border: 1px solid var(--border);
+        color: var(--text);
+        background: transparent;
+      }
+      .btn-plan.outline:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: var(--surface);
+      }
+      .btn-plan.solid {
+        background: var(--accent);
+        color: #0d0d0e;
+        border: 1px solid var(--accent);
+      }
+      .btn-plan.solid:hover {
+        box-shadow: 0 0 30px var(--accent-glow);
+      }
+      .btn-plan:active {
+        transform: scale(0.98);
+      }
+
+      /* CTA */
+      .cta-section {
+        text-align: center;
+        background: var(--bg2);
+        border-top: 1px solid var(--border);
+        padding-bottom: 8rem;
+      }
+      .cta-tag {
+        display: inline-block;
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 1.5rem;
+      }
+      .cta-headline {
+        font-size: clamp(2.5rem, 5vw, 5rem);
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        margin-bottom: 1.5rem;
+      }
+      .cta-headline em {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-style: italic;
+        color: var(--accent);
+      }
+      .cta-sub {
+        font-size: 1.0625rem;
+        color: var(--text-muted);
+        max-width: 46ch;
+        margin: 0 auto 2.5rem;
+        line-height: 1.7;
+      }
+      .cta-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      /* FOOTER */
+      footer {
+        padding: 3rem 2.5rem;
+        border-top: 1px solid var(--border);
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+        flex-wrap: wrap;
+      }
+      .footer-copy {
+        font-size: 0.8125rem;
+        color: var(--text-faint);
+        font-family: var(--font-mono);
+      }
+      .footer-links {
+        display: flex;
+        gap: 2rem;
+        list-style: none;
+      }
+      .footer-links a {
+        font-size: 0.8125rem;
+        color: var(--text-faint);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      .footer-links a:hover {
+        color: var(--text-muted);
+      }
+
+      /* SCROLL REVEAL */
+      .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition:
+          opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .reveal.visible {
+        opacity: 1;
+        transform: none;
+      }
+      .reveal-delay-1 {
+        transition-delay: 0.1s;
+      }
+      .reveal-delay-2 {
+        transition-delay: 0.2s;
+      }
+      .reveal-delay-3 {
+        transition-delay: 0.3s;
+      }
+      .reveal-delay-4 {
+        transition-delay: 0.4s;
+      }
+
+      /* GLOW ORBS */
+      .orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(100px);
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.12;
+      }
+      .orb-1 {
+        width: 600px;
+        height: 600px;
+        background: var(--accent);
+        top: -200px;
+        right: -150px;
+      }
+      .orb-2 {
+        width: 400px;
+        height: 400px;
+        background: #00b4d8;
+        bottom: -100px;
+        left: -100px;
+      }
+
+      /* MOBILE */
+      @media (max-width: 900px) {
+        nav {
+          padding: 1.25rem 1.25rem;
+        }
+        .nav-links {
+          display: none;
+        }
+        .hero {
+          grid-template-columns: 1fr;
+          padding: 8rem 1.25rem 5rem;
+          gap: 3rem;
+        }
+        .hero-visual {
+          justify-content: stretch;
+        }
+        .terminal-card {
+          max-width: 100%;
+        }
+        .features-header {
+          grid-template-columns: 1fr;
+          gap: 2rem;
+        }
+        .feat-wide,
+        .feat-narrow,
+        .feat-third {
+          grid-column: span 12;
+        }
+        .proof-grid {
+          grid-template-columns: 1fr;
+        }
+        .pricing-grid {
+          grid-template-columns: 1fr;
+        }
+        section {
+          padding: 5rem 1.25rem;
+        }
+        footer {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+      @media (max-width: 600px) {
+        .hero-headline {
+          font-size: 2.5rem;
+        }
+        .hero-stat-strip {
+          position: static;
+          margin-top: 2rem;
+        }
+        body {
+          cursor: auto;
+        }
+        #cursor {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div id="cursor"></div>
+
+    <!-- NAV -->
+    <nav id="navbar">
+      <a href="#" class="logo">forma<span class="logo-dot">.</span></a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#proof">Customers</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#">Docs</a></li>
+      </ul>
+      <a href="#pricing" class="nav-cta">Get started</a>
+    </nav>
+
+    <!-- HERO -->
+    <section style="padding-top: 0; padding-bottom: 0">
+      <div class="hero">
+        <div class="hero-left">
+          <div class="hero-badge reveal">
+            <span class="badge-pulse"></span>
+            Now in public beta
+          </div>
+          <h1 class="hero-headline reveal reveal-delay-1">
+            Build systems<br />that <em>actually</em><br />scale.
+          </h1>
+          <p class="hero-sub reveal reveal-delay-2">
+            Forma is the infrastructure platform for teams who refuse to ship
+            mediocre software. Orchestrate, observe, and optimize every layer of
+            your stack — without the ops headache.
+          </p>
+          <div class="hero-actions reveal reveal-delay-3">
+            <a href="#pricing" class="btn-primary">
+              Start building free
+              <svg
+                width="16"
+                height="16"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+            <a href="#features" class="btn-ghost">
+              See how it works
+              <svg
+                width="16"
+                height="16"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div class="hero-visual reveal reveal-delay-2">
+          <div style="position: relative; width: 100%">
+            <div class="terminal-card">
+              <div class="terminal-bar">
+                <span class="t-dot red"></span>
+                <span class="t-dot yellow"></span>
+                <span class="t-dot green"></span>
+                <span class="terminal-title">forma — deploy</span>
+              </div>
+              <div class="terminal-body" id="terminal">
+                <div class="t-line">
+                  <span class="t-prompt">$</span
+                  ><span class="t-cmd"> forma deploy --prod</span>
+                </div>
+                <div class="t-line t-comment"># Resolving dependencies...</div>
+                <div class="t-line t-output">✓ Build cached (2.1s)</div>
+                <div class="t-line t-output">✓ Infra diff: 3 resources</div>
+                <div class="t-line t-output">✓ CDN invalidated globally</div>
+                <div class="t-line t-output" style="margin-top: 0.5rem">
+                  <span class="t-success">✓ Deployed to production</span>
+                </div>
+                <div class="t-line" style="margin-top: 0.25rem">
+                  <span class="t-output"> https://app.acme.io </span>
+                  <span class="t-cursor"></span>
+                </div>
+              </div>
+            </div>
+            <div class="hero-stat-strip reveal reveal-delay-4">
+              <div class="hero-stat">
+                <span class="stat-val">99.99%</span>
+                <span class="stat-label">Uptime SLA</span>
+              </div>
+              <div class="hero-stat">
+                <span class="stat-val">&lt;80ms</span>
+                <span class="stat-label">P95 Latency</span>
+              </div>
+              <div class="hero-stat">
+                <span class="stat-val">180+</span>
+                <span class="stat-label">Edge Nodes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MARQUEE -->
+    <div class="marquee-wrapper">
+      <div class="marquee-track" id="marquee">
+        <!-- duplicated for seamless loop -->
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Zero-downtime deploys
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Auto-scaling infrastructure
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Real-time observability
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Git-native workflows
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>SOC 2 Type II
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Edge compute
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Rollback in 3 seconds
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Multi-cloud support
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Zero-downtime deploys
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Auto-scaling infrastructure
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Real-time observability
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Git-native workflows
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>SOC 2 Type II
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Edge compute
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Rollback in 3 seconds
+        </div>
+        <div class="marquee-item">
+          <span class="marquee-sep"></span>Multi-cloud support
+        </div>
+      </div>
+    </div>
+
+    <!-- FEATURES -->
+    <section id="features">
+      <div class="section-inner">
+        <div class="features-header reveal">
+          <div>
+            <div class="section-tag">Platform</div>
+            <h2 class="features-headline">
+              Everything wired.<br /><em>Nothing wasted.</em>
+            </h2>
+          </div>
+          <p class="features-copy">
+            We spent three years building the developer experience that
+            enterprise infrastructure deserves — one that stops punishing you
+            for moving fast.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feat feat-wide reveal">
+            <div class="feat-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.75"
+              >
+                <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 class="feat-title">Instant preview environments</h3>
+            <p class="feat-desc">
+              Every pull request spins up a fully isolated, production-identical
+              environment in under 30 seconds. No YAML, no babysitting CI
+              pipelines.
+            </p>
+          </div>
+          <div class="feat feat-narrow reveal reveal-delay-1">
+            <div class="feat-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.75"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"
+                />
+              </svg>
+            </div>
+            <h3 class="feat-title">Live observability</h3>
+            <p class="feat-desc">
+              Metrics, traces, logs, and alerts — unified in one view with zero
+              instrumentation overhead.
+            </p>
+          </div>
+          <div class="feat feat-third reveal">
+            <div class="feat-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.75"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h3 class="feat-title">Zero-trust security</h3>
+            <p class="feat-desc">
+              mTLS, secret rotation, and policy-as-code baked into every
+              deployment layer.
+            </p>
+          </div>
+          <div class="feat feat-third reveal reveal-delay-1">
+            <div class="feat-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.75"
+              >
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                />
+              </svg>
+            </div>
+            <h3 class="feat-title">Modular IaC</h3>
+            <p class="feat-desc">
+              Compose your stack from typed, versioned modules. No more
+              imperative scripts masquerading as infrastructure.
+            </p>
+          </div>
+          <div class="feat feat-third reveal reveal-delay-2">
+            <div class="feat-icon">
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.75"
+              >
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+            </div>
+            <h3 class="feat-title">Auto-scaling</h3>
+            <p class="feat-desc">
+              Scale to zero, scale to millions. Intelligent traffic-aware
+              autoscaling that won't bankrupt you on idle hours.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOCIAL PROOF -->
+    <section id="proof" class="proof-section">
+      <div class="section-inner">
+        <div class="section-tag reveal">Customers</div>
+        <h2
+          class="reveal"
+          style="
+            font-size: clamp(2rem, 3vw, 3.25rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            max-width: 22ch;
+          "
+        >
+          Trusted by teams shipping serious products.
+        </h2>
+        <div class="proof-grid">
+          <div class="testimonial reveal">
+            <div class="t-stars">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <p class="t-quote">
+              "We cut our deploy pipeline from 22 minutes to under 4. The
+              preview environments alone saved our entire QA workflow."
+            </p>
+            <div class="t-author">
+              <div
+                class="t-avatar"
+                style="background: #1a2a1a; color: var(--accent)"
+              >
+                MK
+              </div>
+              <div>
+                <div class="t-name">Maya Keller</div>
+                <div class="t-role">CTO — Layered Health</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial reveal reveal-delay-1">
+            <div class="t-stars">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <p class="t-quote">
+              "The observability stack replaced three separate tools. My team
+              finally has one source of truth without maintaining anything."
+            </p>
+            <div class="t-author">
+              <div class="t-avatar" style="background: #1a1a2a; color: #7c8cf8">
+                DR
+              </div>
+              <div>
+                <div class="t-name">David Reyes</div>
+                <div class="t-role">Staff Eng — Mercado Stack</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial reveal reveal-delay-2">
+            <div class="t-stars">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <p class="t-quote">
+              "We're a 6-person team running infra that used to need a DevOps
+              hire. Forma genuinely changed our hiring math."
+            </p>
+            <div class="t-author">
+              <div class="t-avatar" style="background: #2a1a1a; color: #f87c6a">
+                SP
+              </div>
+              <div>
+                <div class="t-name">Sasha Park</div>
+                <div class="t-role">Founder — Bloc Studio</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING -->
+    <section id="pricing">
+      <div class="section-inner">
+        <div class="section-tag reveal">Pricing</div>
+        <h2
+          class="reveal"
+          style="
+            font-size: clamp(2rem, 3vw, 3.25rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 0.75rem;
+          "
+        >
+          Honest pricing.<br />No seat-based traps.
+        </h2>
+        <p
+          class="reveal"
+          style="color: var(--text-muted); font-size: 1rem; margin-bottom: 0"
+        >
+          Pay for what you use. Cancel anytime. Switch plans in seconds.
+        </p>
+
+        <div class="pricing-grid">
+          <!-- Starter -->
+          <div class="price-card reveal">
+            <div class="price-label">Starter</div>
+            <div class="price-amount">$0</div>
+            <div class="price-period">/ month · free forever</div>
+            <div class="price-desc">
+              Everything you need to explore Forma and ship your first
+              production app.
+            </div>
+            <ul class="price-features">
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >3 environments
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >100 GB bandwidth
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >7-day log retention
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Community support
+              </li>
+            </ul>
+            <a href="#" class="btn-plan outline">Get started free</a>
+          </div>
+
+          <!-- Pro (featured) -->
+          <div class="price-card featured reveal reveal-delay-1">
+            <div class="price-label acc">Pro · Most popular</div>
+            <div class="price-amount" style="color: var(--accent)">$79</div>
+            <div class="price-period">/ month · billed annually</div>
+            <div class="price-desc">
+              For serious teams scaling a real product without a dedicated ops
+              team.
+            </div>
+            <ul class="price-features">
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Unlimited environments
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >2 TB bandwidth
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >90-day log retention
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Priority Slack support
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Auto-scaling included
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >99.99% uptime SLA
+              </li>
+            </ul>
+            <a href="#" class="btn-plan solid">Start Pro trial</a>
+          </div>
+
+          <!-- Enterprise -->
+          <div class="price-card reveal reveal-delay-2">
+            <div class="price-label">Enterprise</div>
+            <div class="price-amount">Custom</div>
+            <div class="price-period">/ tailored to your scale</div>
+            <div class="price-desc">
+              Dedicated infrastructure, SSO, SAML, and a solutions engineer in
+              your corner.
+            </div>
+            <ul class="price-features">
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Everything in Pro
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Dedicated cloud tenancy
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >SSO + SAML + RBAC
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Custom contracts + MSA
+              </li>
+              <li>
+                <span class="check"
+                  ><svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="2,6 5,9 10,3" /></svg></span
+                >Dedicated SE
+              </li>
+            </ul>
+            <a href="#" class="btn-plan outline">Talk to sales</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+      <div class="section-inner" style="text-align: center">
+        <span class="cta-tag reveal">Ready when you are</span>
+        <h2 class="cta-headline reveal reveal-delay-1">
+          Ship faster.<br />Sleep <em>better.</em>
+        </h2>
+        <p class="cta-sub reveal reveal-delay-2">
+          Set up in under 10 minutes. No credit card required for the free tier.
+          Just connect your repo and go.
+        </p>
+        <div class="cta-actions reveal reveal-delay-3">
+          <a
+            href="#"
+            class="btn-primary"
+            style="font-size: 1.0625rem; padding: 1rem 2.25rem"
+          >
+            Start for free
+            <svg
+              width="16"
+              height="16"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </a>
+          <a href="#" class="btn-ghost" style="font-size: 0.9375rem"
+            >Read the docs</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <span class="footer-copy">© 2026 Forma, Inc. All rights reserved.</span>
+      <ul class="footer-links">
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Status</a></li>
+        <li><a href="#">GitHub</a></li>
+      </ul>
+    </footer>
+
+    <script>
+      // Custom cursor
+      const cursor = document.getElementById("cursor");
+      let mx = 0,
+        my = 0,
+        cx = 0,
+        cy = 0;
+      document.addEventListener("mousemove", (e) => {
+        mx = e.clientX;
+        my = e.clientY;
+      });
+      const raf = () => {
+        cx += (mx - cx) * 0.18;
+        cy += (my - cy) * 0.18;
+        cursor.style.left = cx + "px";
+        cursor.style.top = cy + "px";
+        requestAnimationFrame(raf);
+      };
+      raf();
+      document
+        .querySelectorAll("a, button, .feat, .price-card, .testimonial")
+        .forEach((el) => {
+          el.addEventListener("mouseenter", () =>
+            cursor.classList.add("expand"),
+          );
+          el.addEventListener("mouseleave", () =>
+            cursor.classList.remove("expand"),
+          );
+        });
+
+      // Nav scroll state
+      const navbar = document.getElementById("navbar");
+      window.addEventListener(
+        "scroll",
+        () => {
+          navbar.classList.toggle("scrolled", window.scrollY > 40);
+        },
+        { passive: true },
+      );
+
+      // Scroll reveal
+      const revealEls = document.querySelectorAll(".reveal");
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("visible");
+              observer.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.12 },
+      );
+      revealEls.forEach((el) => observer.observe(el));
+
+      // Terminal typewriter effect
+      const lines = [
+        { prompt: "$", cmd: " forma deploy --prod", delay: 0 },
+        { comment: "# Resolving dependencies...", delay: 600 },
+        { output: "✓ Build cached (2.1s)", delay: 1100 },
+        { output: "✓ Infra diff: 3 resources", delay: 1600 },
+        { output: "✓ CDN invalidated globally", delay: 2100 },
+        { success: "✓ Deployed to production", delay: 2700 },
+        { url: "https://app.acme.io", delay: 3100 },
+      ];
+      const terminal = document.getElementById("terminal");
+      if (terminal) {
+        terminal.innerHTML = "";
+        const addLine = (html, delay) => {
+          setTimeout(() => {
+            terminal.insertAdjacentHTML("beforeend", html);
+            terminal.scrollTop = terminal.scrollHeight;
+          }, delay);
+        };
+        addLine(
+          `<div class="t-line"><span class="t-prompt">$</span><span class="t-cmd"> forma deploy --prod</span></div>`,
+          400,
+        );
+        addLine(
+          `<div class="t-line t-comment"># Resolving dependencies...</div>`,
+          1000,
+        );
+        addLine(
+          `<div class="t-line t-output">✓ Build cached (2.1s)</div>`,
+          1600,
+        );
+        addLine(
+          `<div class="t-line t-output">✓ Infra diff: 3 resources</div>`,
+          2100,
+        );
+        addLine(
+          `<div class="t-line t-output">✓ CDN invalidated globally</div>`,
+          2700,
+        );
+        addLine(
+          `<div class="t-line t-output" style="margin-top:0.5rem;"><span class="t-success">✓ Deployed to production</span></div>`,
+          3300,
+        );
+        addLine(
+          `<div class="t-line"><span class="t-output">  https://app.acme.io </span><span class="t-cursor"></span></div>`,
+          3800,
+        );
+      }
+
+      // Ripple on CTA click
+      document
+        .querySelectorAll(".btn-primary, .btn-plan.solid")
+        .forEach((btn) => {
+          btn.addEventListener("click", function (e) {
+            const r = document.createElement("span");
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height) * 1.8;
+            r.style.cssText = `position:absolute;width:${size}px;height:${size}px;left:${e.clientX - rect.left - size / 2}px;top:${e.clientY - rect.top - size / 2}px;border-radius:50%;background:rgba(255,255,255,0.18);transform:scale(0);animation:ripple 0.55s ease-out forwards;pointer-events:none;`;
+            this.style.position = "relative";
+            this.style.overflow = "hidden";
+            this.appendChild(r);
+            setTimeout(() => r.remove(), 600);
+          });
+        });
+      const style = document.createElement("style");
+      style.textContent =
+        "@keyframes ripple{to{transform:scale(1);opacity:0;}}";
+      document.head.appendChild(style);
+    </script>
+  </body>
+</html>
